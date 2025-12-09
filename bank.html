@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Bank Editor - Monopoly Online</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #333; }
+    .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+    .form-group button { width: 100%; padding: 14px; background: #4ca2cd; color: #fff; border: none; cursor: pointer; font-weight: bold; border-radius: 6px; font-size: 16px; min-height: 48px; transition: background 0.2s; }
+    .form-group button:active { background: #3a8fb0; }
+    .link-btn { display: block; text-align: center; padding: 14px; background: #10b981; color: #fff; text-decoration: none; border-radius: 6px; margin-top: 12px; font-weight: bold; min-height: 48px; display: flex; align-items: center; justify-content: center; }
+    .link-btn:active { background: #059669; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="site-header">
+      <h1>🏦 Bank Editor</h1>
+    </header>
+
+    <div class="card">
+      <h2>Configure Bank</h2>
+
+      <div class="form-group">
+        <label for="moneyInput">Money (comma-separated):</label>
+        <input type="text" id="moneyInput" placeholder="e.g., 5000, 1000, 500" />
+      </div>
+
+      <div class="form-group">
+        <label for="propertiesInput">Properties (comma-separated):</label>
+        <input type="text" id="propertiesInput" placeholder="e.g., Park Place, Boardwalk" />
+      </div>
+
+      <div class="form-group">
+        <label for="cardsInput">Cards (comma-separated):</label>
+        <input type="text" id="cardsInput" placeholder="e.g., Community Chest, Chance" />
+      </div>
+
+      <div class="form-group">
+        <button id="saveBankBtn">Save Bank Configuration</button>
+      </div>
+
+      <a href="/game" class="link-btn">Go to Game</a>
+    </div>
+
+  <script>
+    const roomCode = '{{ room_code }}';
+
+    // Load current bank data
+    fetch(`/api/room/${roomCode}`)
+      .then(r => r.json())
+      .then(room => {
+        if (room.money && room.money.length > 0) {
+          document.getElementById('moneyInput').value = room.money.map(m => m.qty || m).join(', ');
+        }
+        if (room.properties && room.properties.length > 0) {
+          document.getElementById('propertiesInput').value = room.properties.map(p => p.name || p).join(', ');
+        }
+        if (room.cards && room.cards.length > 0) {
+          document.getElementById('cardsInput').value = room.cards.join(', ');
+        }
+      });
+
+    // Save bank configuration
+    document.getElementById('saveBankBtn').addEventListener('click', async () => {
+      const money = document.getElementById('moneyInput').value
+        .split(',').filter(x => x.trim()).map(x => ({ qty: parseInt(x.trim()) }));
+      const properties = document.getElementById('propertiesInput').value
+        .split(',').filter(x => x.trim()).map(x => ({ name: x.trim() }));
+      const cards = document.getElementById('cardsInput').value
+        .split(',').filter(x => x.trim());
+
+      const response = await fetch(`/api/room/${roomCode}/update-bank`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ money, properties, cards })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Bank configuration saved!');
+        window.location.href = '/game';
+      }
+    });
+  </script>
+
+</body>
+</html>

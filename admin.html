@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Admin Panel - Monopoly Online</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    body { background: linear-gradient(135deg, #74ABE2, #5563DE); }
+    .code-box { background: #ffffff20; padding: 14px 16px; margin-top: 12px; border-radius: 8px; font-size: 1.3rem; letter-spacing: 3px; font-weight: bold; text-align: center; color: white; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #333; }
+    .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+    .form-group button { width: 100%; padding: 14px; background: #fff; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; min-height: 48px; transition: all 0.2s; }
+    .form-group button:active { background: #e0e0e0; transform: translateY(2px); }
+    .link-btn { display: block; text-align: center; padding: 14px; background: #10b981; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 12px; min-height: 48px; display: flex; align-items: center; justify-content: center; }
+    .link-btn:active { background: #059669; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="site-header">
+      <h1>🏠 Admin Panel</h1>
+    </header>
+
+    <div class="card" style="background:transparent; box-shadow:none;">
+      <p style="color:white; text-align:center; font-size:1.1rem; font-weight:bold">Your Room Code:</p>
+      <div class="code-box">{{ room_code }}</div>
+
+      <div class="form-group" style="margin-top:16px">
+        <label for="adminNameInput" style="color:white">Admin Name</label>
+        <input type="text" id="adminNameInput" placeholder="Enter Admin Name" value="{{ session.get('player_name', '') }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="playerCountSelect" style="color:white">Number of players</label>
+        <select id="playerCountSelect">
+          <option value="2">2 players</option>
+          <option value="3">3 players</option>
+          <option value="4" selected>4 players</option>
+          <option value="5">5 players</option>
+          <option value="6">6 players</option>
+          <option value="7">7 players</option>
+          <option value="8">8 players</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <button id="saveAdminBtn">Save & Open Bank Panel</button>
+      </div>
+
+      <a href="/calculator" class="link-btn">Open Calculator</a>
+    </div>
+
+  <script>
+    document.getElementById('saveAdminBtn').addEventListener('click', async () => {
+      const adminName = document.getElementById('adminNameInput').value.trim();
+      if (!adminName) {
+        alert('Please enter admin name');
+        return;
+      }
+      const playerCount = parseInt(document.getElementById('playerCountSelect').value) || 4;
+
+      const response = await fetch('/api/admin/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          room_code: '{{ room_code }}',
+          admin_name: adminName, 
+          player_count: playerCount 
+        })
+      });
+
+      const data = await response.json();
+      if (data.error) {
+        alert(data.error);
+      } else {
+        window.location.href = '/bank';
+      }
+    });
+  </script>
+
+</body>
+</html>

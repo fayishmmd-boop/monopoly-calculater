@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Game - Monopoly Online</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    .players-table { width: 100%; border-collapse: collapse; }
+    .players-table th, .players-table td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+    .debt-red { color: #ef4444; font-weight: bold; }
+    .loan-green { color: #10b981; font-weight: bold; }
+    .btn-owe { background: #ef4444; color: #fff; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+    .btn-loan { background: #10b981; color: #fff; border: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; margin-left: 4px; }
+    #bankBtn { position: fixed; bottom: 16px; right: 16px; padding: 12px 16px; border-radius: 50px; border: none; background: #4ca2cd; color: #fff; cursor: pointer; z-index: 99999; font-size: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-height: 48px; min-width: 48px; }
+    #bankBtn:active { transform: scale(0.95); }
+    .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 300; padding: 16px; }
+    .modal[aria-hidden="false"] { display: flex; }
+    .modal__backdrop { position: absolute; inset: 0; background: rgba(2,6,23,0.6); }
+    .modal__panel { position: relative; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; z-index: 310; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal__header h3 { margin: 0; }
+    .modal__close { background: #ef4444; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+    .game-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-box { background: #f9f9f9; padding: 12px; border-radius: 8px; }
+    .info-label { font-size: 0.85rem; color: #666; margin-bottom: 4px; }
+    .info-value { font-size: 1.2rem; font-weight: bold; color: #333; }
+    @media (max-width: 640px) {
+      .players-table th, .players-table td { padding: 6px; font-size: 0.8rem; }
+      .btn-owe, .btn-loan { padding: 6px 8px; font-size: 0.75rem; }
+      #bankBtn { bottom: 12px; right: 12px; padding: 10px 14px; font-size: 0.9rem; }
+      .game-info { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="site-header">
+      <h1>🎮 Monopoly Game</h1>
+    </header>
+
+    <section class="card card--highlight">
+      <h2>Game Info</h2>
+      <div class="game-info">
+        <div class="info-box">
+          <div class="info-label">Room Code</div>
+          <div class="info-value">{{ room_code }}</div>
+        </div>
+        <div class="info-box">
+          <div class="info-label">Your Name</div>
+          <div class="info-value">{{ player_name }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>👥 Players</h3>
+      <div style="overflow-x: auto;">
+        <table class="players-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th style="text-align:right">Balance</th>
+              <th style="text-align:right" class="mobile-hide">Owes</th>
+              <th style="text-align:right" class="mobile-hide">Owed</th>
+              <th style="text-align:right">Net</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="playersTableBody">
+            {% for player in room.players %}
+            <tr>
+              <td>{{ player.name or '(empty)' }}</td>
+              <td style="text-align:right; font-weight:bold">{{ player.balance | int }}</td>
+              <td style="text-align:right" class="mobile-hide">
+                {% set owes = room.debts | selectattr('from', 'equalto', player.name) | map(attribute='amount') | sum %}
+                <span class="{% if owes > 0 %}debt-red{% endif %}">{{ owes | int }}</span>
+              </td>
+              <td style="text-align:right" class="mobile-hide">
+                {% set owed = room.debts | selectattr('to', 'equalto', player.name) | map(attribute='amount') | sum %}
+                <span class="{% if owed > 0 %}loan-green{% endif %}">{{ owed | int }}</span>
+              </td>
+              <td style="text-align:right">
+                {% set owes = room.debts | selectattr('from', 'equalto', player.name) | map(attribute='amount') | sum %}
+                {% set owed = room.debts | selectattr('to', 'equalto', player.name) | map(attribute='amount') | sum %}
+                <strong>{{ (player.balance - owes + owed) | int }}</strong>
+              </td>
+              <td style="text-align:right">
+                <button class="btn-owe" data-player="{{ player.name }}">Owe</button>
+                <button class="btn-loan" data-player="{{ player.name }}">Loan</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Bank modal -->
+    <div id="bankModal" class="modal" aria-hidden="true">
+      <div class="modal__backdrop"></div>
+      <div class="modal__panel">
+        <div class="modal__header">
+          <h3>🏦 Bank Details</h3>
+          <button id="bankCloseBtn" class="modal__close">Close</button>
+        </div>
+        <div id="bankModalContent">
+          <section style="margin-bottom:16px">
+            <h4 style="margin-top:0;margin-bottom:8px">💵 Money</h4>
+            <div id="modalMoney" style="font-size:0.9rem">Loading…</div>
+          </section>
+          <section style="margin-bottom:16px">
+            <h4 style="margin-bottom:8px">🏠 Properties</h4>
+            <div id="modalProperties" style="font-size:0.9rem">Loading…</div>
+          </section>
+          <section style="margin-bottom:16px">
+            <h4 style="margin-bottom:8px">🎫 Cards</h4>
+            <div id="modalCards" style="font-size:0.9rem">Loading…</div>
+          </section>
+          <section style="margin-bottom:16px">
+            <h4 style="margin-bottom:8px">👤 Players</h4>
+            <div id="modalPlayers" style="font-size:0.9rem">Loading…</div>
+          </section>
+          <section style="margin-bottom:16px">
+            <h4 style="margin-bottom:8px">🏦 Bank Transfer</h4>
+            <div style="display:grid;gap:12px;margin-bottom:12px">
+              <label>
+                <span style="display:block;margin-bottom:4px;font-size:0.85rem">Select Player:</span>
+                <select id="bankTransferPlayer" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:0.9rem">
+                  <option value="">-- Choose Player --</option>
+                </select>
+              </label>
+              <label>
+                <span style="display:block;margin-bottom:4px;font-size:0.85rem">Amount ($):</span>
+                <input type="number" id="bankTransferAmount" placeholder="0" min="1" step="1" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;box-sizing:border-box">
+              </label>
+              <label>
+                <span style="display:block;margin-bottom:4px;font-size:0.85rem">Note (optional):</span>
+                <input type="text" id="bankTransferNote" placeholder="e.g., Buy property" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;box-sizing:border-box">
+              </label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <button onclick="doBankTransfer('from_bank')" style="background:#10b981;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-size:0.9rem">💵 Player Gets Money</button>
+                <button onclick="doBankTransfer('to_bank')" style="background:#ef4444;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-size:0.9rem">💰 Player Pays Bank</button>
+              </div>
+            </div>
+            <div id="bankTransferStatus"></div>
+          </section>
+          <section style="margin-bottom:16px">
+            <h4 style="margin-bottom:8px">📋 Debts</h4>
+            <div id="modalDebts" style="font-size:0.9rem">Loading…</div>
+          </section>
+          <section>
+            <h4 style="margin-bottom:8px">📊 Recent Transactions</h4>
+            <div id="modalTx" style="font-size:0.9rem">Loading…</div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="bankBtn">🏦 Bank Info</button>
+
+  <script>
+    const roomCode = '{{ room_code }}';
+    const playerName = '{{ player_name }}';
+
+    // Load and display bank modal
+    function renderBankModal() {
+      fetch(`/api/room/${roomCode}`)
+        .then(r => r.json())
+        .then(room => {
+          const money = room.money || [];
+          const properties = room.properties || [];
+          const cards = room.cards || [];
+          const players = room.players || [];
+          const debts = room.debts || [];
+          const transactions = room.transactions || [];
+
+          document.getElementById('modalMoney').innerHTML = money.length > 0 
+            ? money.map(m => `<div style="padding:6px;border-bottom:1px solid #eee">${m.val || m.qty} × ${m.qty}</div>`).join('')
+            : '<em>No money in bank</em>';
+
+          document.getElementById('modalProperties').innerHTML = properties.length > 0
+            ? properties.map(p => `<div style="padding:6px;border-bottom:1px solid #eee">${p.name} - ${p.price}</div>`).join('')
+            : '<em>No properties</em>';
+
+          document.getElementById('modalCards').innerHTML = cards.length > 0
+            ? '<ul style="margin:0;padding-left:20px">' + cards.map(c => `<li style="padding:4px 0">${c}</li>`).join('') + '</ul>'
+            : '<em>No cards</em>';
+
+          document.getElementById('modalPlayers').innerHTML = players.length > 0
+            ? players.map(p => `<div style="display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #eee"><span>${p.name || '(empty)'}</span><span style="font-weight:600">$${p.balance}</span></div>`).join('')
+            : '<em>No players</em>';
+
+          // Update bank transfer player dropdown
+          const playerSelect = document.getElementById('bankTransferPlayer');
+          playerSelect.innerHTML = '<option value="">-- Choose Player --</option>' + 
+            players.map(p => p.name ? `<option value="${p.name}">${p.name} ($${p.balance})</option>` : '').join('');
+
+          document.getElementById('modalDebts').innerHTML = debts.length > 0
+            ? debts.map((d, i) => `<div style="padding:8px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center"><span>${d.from} → ${d.to}: <strong>$${d.amount}</strong></span><button onclick="settleDebt(${i})" style="background:#10b981;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.85rem">Settle</button></div>`).join('')
+            : '<em>No debts</em>';
+
+          document.getElementById('modalTx').innerHTML = transactions.length > 0
+            ? transactions.slice().reverse().slice(0, 10).map(tx => 
+              `<div style="padding:8px;border-bottom:1px solid #eee"><small style="color:#666">${new Date(tx.ts).toLocaleString()}</small><div style="margin-top:4px"><strong>${tx.from} → ${tx.to}</strong>: <strong style="color:#4ca2cd">$${tx.amount}</strong></div></div>`
+            ).join('')
+            : '<em>No transactions</em>';
+        });
+    }
+
+    // Bank transfer function
+    async function doBankTransfer(direction) {
+      const player = document.getElementById('bankTransferPlayer').value;
+      const amount = document.getElementById('bankTransferAmount').value;
+      const note = document.getElementById('bankTransferNote').value;
+      const statusDiv = document.getElementById('bankTransferStatus');
+
+      if (!player || !amount || Number(amount) <= 0) {
+        statusDiv.innerHTML = '<span style="color:#ef4444">❌ Please select a player and enter an amount</span>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/room/${roomCode}/bank-transfer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ player, amount: Number(amount), direction, note })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          statusDiv.innerHTML = `<span style="color:#ef4444">❌ ${error.error || 'Transfer failed'}</span>`;
+          return;
+        }
+
+        const actionText = direction === 'from_bank' ? `${player} received` : `${player} paid`;
+        statusDiv.innerHTML = `<span style="color:#10b981">✓ ${actionText} $${amount}</span>`;
+        
+        // Clear form
+        document.getElementById('bankTransferAmount').value = '';
+        document.getElementById('bankTransferNote').value = '';
+        document.getElementById('bankTransferPlayer').value = '';
+
+        // Reload modal after a brief delay
+        setTimeout(() => renderBankModal(), 500);
+      } catch (err) {
+        statusDiv.innerHTML = `<span style="color:#ef4444">❌ Error: ${err.message}</span>`;
+      }
+    }
+
+    // Modal controls
+    document.getElementById('bankBtn').addEventListener('click', () => {
+      document.getElementById('bankModal').setAttribute('aria-hidden', 'false');
+      renderBankModal();
+    });
+
+    document.getElementById('bankCloseBtn').addEventListener('click', () => {
+      document.getElementById('bankModal').setAttribute('aria-hidden', 'true');
+    });
+
+    document.querySelector('.modal__backdrop').addEventListener('click', () => {
+      document.getElementById('bankModal').setAttribute('aria-hidden', 'true');
+    });
+
+    // Handle Owe/Loan buttons
+    document.querySelectorAll('.btn-owe, .btn-loan').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const player = e.target.dataset.player;
+        const isOwe = e.target.classList.contains('btn-owe');
+        
+        const amount = prompt(`Enter amount for ${isOwe ? 'debt' : 'loan'}:`);
+        if (!amount || Number(amount) <= 0) return;
+
+        const response = await fetch(`/api/room/${roomCode}/players`);
+        const players = await response.json();
+        const otherNames = players.filter(p => p.name && p.name !== player).map(p => p.name);
+
+        if (otherNames.length === 0) {
+          alert('No other players');
+          return;
+        }
+
+        const otherPlayer = prompt(`Who is the other player? (${otherNames.join(', ')}):`);
+        if (!otherNames.includes(otherPlayer)) {
+          alert('Invalid player');
+          return;
+        }
+
+        if (isOwe) {
+          await fetch(`/api/room/${roomCode}/add-debt`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: player, to: otherPlayer, amount: Number(amount), note: 'created in-game' })
+          });
+          alert(`${player} now owes ${otherPlayer} $${amount}`);
+        } else {
+          await fetch(`/api/room/${roomCode}/add-debt`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: otherPlayer, to: player, amount: Number(amount), note: 'loan created in-game' })
+          });
+          alert(`${player} lent $${amount} to ${otherPlayer}`);
+        }
+
+        location.reload();
+      });
+    });
+
+    // Settle debt
+    function settleDebt(idx) {
+      if (confirm('Settle this debt?')) {
+        fetch(`/api/room/${roomCode}/settle-debt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idx })
+        }).then(() => location.reload());
+      }
+    }
+  </script>
+</body>
+</html>

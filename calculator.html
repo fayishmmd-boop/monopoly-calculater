@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Calculator - Monopoly Online</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    .calc-section { margin: 12px 0; padding: 12px; background: #f9f9f9; border-radius: 6px; }
+    .btn-calc { width: 100%; padding: 12px; background: #4ca2cd; color: #fff; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-weight: bold; min-height: 48px; font-size: 16px; }
+    .btn-calc:active { background: #3a8fb0; }
+    #taxHouseBtn { background: #ef4444; }
+    #taxHouseBtn:active { background: #dc2626; }
+    #taxNoSetBtn { background: #f59e0b; }
+    #taxNoSetBtn:active { background: #d97706; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; }
+    .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+    .back-link { display: inline-block; padding: 12px 16px; background: #10b981; color: #fff; text-decoration: none; border-radius: 6px; margin-top: 12px; font-weight: bold; text-align: center; width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="site-header">
+      <h1>🧮 Bank Calculator</h1>
+    </header>
+
+    <div class="card">
+      <h2>Transaction Actions</h2>
+
+      <div class="calc-section">
+        <h3 style="margin-top:0;margin-bottom:8px">🏦 Tax Actions</h3>
+        <button class="btn-calc" id="taxHouseBtn" style="background:#ef4444">Tax (per house)</button>
+        <button class="btn-calc" id="taxNoSetBtn" style="background:#f59e0b">Tax (no set)</button>
+      </div>
+
+      <div class="calc-section">
+        <h3 style="margin-top:0;margin-bottom:8px">💸 Transfer Money</h3>
+        <div class="form-group">
+          <label>From:</label>
+          <input type="text" id="fromPlayer" placeholder="Player name" />
+        </div>
+        <div class="form-group">
+          <label>To:</label>
+          <input type="text" id="toPlayer" placeholder="Player name" />
+        </div>
+        <div class="form-group">
+          <label>Amount:</label>
+          <input type="number" id="transferAmount" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label>Note:</label>
+          <input type="text" id="transferNote" placeholder="Optional note" />
+        </div>
+        <button class="btn-calc" id="transferBtn">Transfer</button>
+      </div>
+
+      <div class="calc-section">
+        <h3 style="margin-top:0;margin-bottom:8px">📝 Record Debt</h3>
+        <div class="form-group">
+          <label>Who owes:</label>
+          <input type="text" id="debtFrom" placeholder="Player name" />
+        </div>
+        <div class="form-group">
+          <label>To whom:</label>
+          <input type="text" id="debtTo" placeholder="Player name" />
+        </div>
+        <div class="form-group">
+          <label>Amount:</label>
+          <input type="number" id="debtAmount" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label>Note:</label>
+          <input type="text" id="debtNote" placeholder="Optional note" />
+        </div>
+        <button class="btn-calc" id="debtBtn">Add Debt</button>
+      </div>
+
+      <a href="/game" class="back-link">Back to Game</a>
+    </div>
+
+  <script>
+    const roomCode = '{{ room_code }}';
+
+    // Tax per house
+    document.getElementById('taxHouseBtn').addEventListener('click', async () => {
+      const response = await fetch(`/api/room/${roomCode}/players`);
+      const players = await response.json();
+      const names = players.filter(p => p.name).map(p => p.name);
+
+      const player = prompt(`Tax per house - Select player (${names.join(', ')}):`);
+      if (!names.includes(player)) return;
+
+      const amount = prompt('Amount per house:');
+      if (!amount || Number(amount) <= 0) return;
+
+      await fetch(`/api/room/${roomCode}/transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: player, to: 'BANK', amount: Number(amount), note: 'Tax (per house)' })
+      });
+
+      alert(`${player} paid tax of $${amount}`);
+      location.reload();
+    });
+
+    // Tax no set
+    document.getElementById('taxNoSetBtn').addEventListener('click', async () => {
+      const response = await fetch(`/api/room/${roomCode}/players`);
+      const players = await response.json();
+      const names = players.filter(p => p.name).map(p => p.name);
+
+      const player = prompt(`Tax (no set) - Select player (${names.join(', ')}):`);
+      if (!names.includes(player)) return;
+
+      const amount = prompt('Amount:');
+      if (!amount || Number(amount) <= 0) return;
+
+      await fetch(`/api/room/${roomCode}/transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: player, to: 'BANK', amount: Number(amount), note: 'Tax (no set)' })
+      });
+
+      alert(`${player} paid tax of $${amount}`);
+      location.reload();
+    });
+
+    // Transfer money
+    document.getElementById('transferBtn').addEventListener('click', async () => {
+      const from = document.getElementById('fromPlayer').value.trim();
+      const to = document.getElementById('toPlayer').value.trim();
+      const amount = Number(document.getElementById('transferAmount').value);
+      const note = document.getElementById('transferNote').value.trim();
+
+      if (!from || !to || amount <= 0) {
+        alert('Invalid input');
+        return;
+      }
+
+      await fetch(`/api/room/${roomCode}/transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to, amount, note })
+      });
+
+      alert(`Transferred $${amount} from ${from} to ${to}`);
+      location.reload();
+    });
+
+    // Add debt
+    document.getElementById('debtBtn').addEventListener('click', async () => {
+      const from = document.getElementById('debtFrom').value.trim();
+      const to = document.getElementById('debtTo').value.trim();
+      const amount = Number(document.getElementById('debtAmount').value);
+      const note = document.getElementById('debtNote').value.trim();
+
+      if (!from || !to || amount <= 0) {
+        alert('Invalid input');
+        return;
+      }
+
+      await fetch(`/api/room/${roomCode}/add-debt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to, amount, note })
+      });
+
+      alert(`${from} now owes ${to} $${amount}`);
+      location.reload();
+    });
+  </script>
+
+</body>
+</html>

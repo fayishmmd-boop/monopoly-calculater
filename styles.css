@@ -1,0 +1,388 @@
+/* Shared styles for Monopoly Game - Responsive Mobile & Desktop */
+
+:root {
+  --accent: #4ca2cd;
+  --card-bg: #ffffff;
+  --muted: #666666;
+  --border: #eeeeee;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warn: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-attachment: fixed;
+  color: #333;
+  font-size: 16px;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input, select, textarea {
+  font-size: 16px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+  min-height: 100vh;
+}
+
+.site-header {
+  text-align: center;
+  margin-bottom: 20px;
+  color: white;
+  padding: 16px 0;
+}
+
+.site-header img {
+  max-width: 100px;
+  height: auto;
+  margin-bottom: 10px;
+}
+
+.site-header h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.2;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.card--highlight {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+  border-left: 4px solid var(--accent);
+}
+
+.card h2, .card h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #333;
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+}
+
+.button, button {
+  display: inline-block;
+  padding: 12px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-size: 16px;
+  min-height: 48px;
+  min-width: 48px;
+  touch-action: manipulation;
+}
+
+.button:hover, .button:active, button:hover, button:active {
+  background: #3a8fb0;
+  transform: translateY(-2px);
+}
+
+.button:active, button:active {
+  transform: translateY(0);
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 16px;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(76, 162, 205, 0.1);
+}
+
+/* Responsive table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+}
+
+th {
+  background: #f9f9f9;
+  padding: 10px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9em;
+}
+
+td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Hide on mobile, show on desktop */
+.desktop-only {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Form layout */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Flex utilities */
+.flex {
+  display: flex;
+  gap: 8px;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-between {
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Color utilities */
+.text-red {
+  color: var(--danger);
+  font-weight: bold;
+}
+
+.text-green {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.bg-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.bg-success {
+  background: var(--success);
+  color: white;
+}
+
+.bg-warn {
+  background: var(--warn);
+  color: white;
+}
+
+/* Modals */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal[aria-hidden="false"] {
+  display: flex;
+  pointer-events: auto;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.6);
+  z-index: -1;
+}
+
+.modal__panel {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: 310;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 640px) {
+  .container {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .site-header {
+    margin-bottom: 16px;
+    padding: 12px 0;
+  }
+
+  .site-header img {
+    max-width: 80px;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
+
+  th, td {
+    padding: 6px;
+  }
+
+  /* Stack buttons on mobile */
+  .button, button {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  /* Hide less important columns on mobile */
+  .mobile-hide {
+    display: none;
+  }
+
+  /* Make inputs full width */
+  input, select, textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  /* Responsive heading */
+  .site-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .card h2, .card h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Modal adjustments for small screens */
+  .modal__panel {
+    width: 100%;
+    max-width: 95vw;
+    max-height: 90vh;
+    padding: 16px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container {
+    padding: 16px;
+  }
+
+  .desktop-only {
+    display: block;
+  }
+
+  table {
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .desktop-only {
+    display: block;
+  }
+
+  .container {
+    padding: 20px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  /* Show all columns on desktop */
+  .mobile-hide {
+    display: table-cell;
+  }
+}
+
+/* Tablet improvements */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .button, button {
+    display: inline-block;
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (orientation: landscape) and (max-height: 600px) {
+  .container {
+    padding: 8px;
+  }
+
+  .card {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .site-header {
+    margin-bottom: 8px;
+  }
+
+  .site-header img {
+    max-width: 60px;
+  }
+}
